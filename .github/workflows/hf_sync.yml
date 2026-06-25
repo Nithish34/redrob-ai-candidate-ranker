@@ -1,0 +1,23 @@
+name: Sync to Hugging Face Spaces
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Force push to HF Spaces. 
+          # Replace 'voldigo/ai-recruiter' with your HF account name and Space name.
+          git push --force https://voldigo:$HF_TOKEN@huggingface.co/spaces/voldigo/ai-recruiter
