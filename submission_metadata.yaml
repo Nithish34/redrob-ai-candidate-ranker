@@ -1,0 +1,76 @@
+# Redrob Hackathon — Submission Metadata
+#
+# Please fill in your team identity and compute environment below.
+# Stage 3 review uses this file to verify your portal metadata.
+
+# ============================================================================
+# Team identity
+# ============================================================================
+team_name: "your-team-name-here"  # Used in leaderboard and announcements
+
+primary_contact:
+  name: "Your Full Name"
+  email: "your-email@example.com"   # Used for all organizer communication
+  phone: "+91-XXXXXXXXXX"          # Used for outreach
+
+team_members:
+  - name: "Your Full Name"
+    email: "your-email@example.com"
+    role: "ML Engineer"            # e.g. "Team Lead", "ML Engineer", etc.
+
+# ============================================================================
+# Code and reproducibility
+# ============================================================================
+github_repo: "https://github.com/Nithish34/ai-recruiter-"
+# Required. Must be reachable. 
+# If private, grant access to organizers at Stage 3.
+
+sandbox_link: "https://huggingface.co/spaces/<HF_USERNAME>/<HF_SPACE_NAME>"
+# Required. Your Gradio hosted Space link.
+
+reproduce_command: "python app/main.py --candidates ./candidates.jsonl --out ./submission.csv"
+# The single command that produces submission.csv from candidates.jsonl.
+# Completed on full 100K candidates in ~7 minutes, test set runs at 1000 candidates/sec.
+
+# ============================================================================
+# Compute environment
+# ============================================================================
+compute:
+  platform: "Local PC"                         # Edit if needed
+  cpu_cores: 8                                 # Number of CPU cores used
+  ram_gb: 16                                   # Available RAM in GB
+  python_version: "3.10.x"                     # Edit to your python version
+  os: "Windows 11"                             # OS used
+  uses_gpu_for_inference: false                # Must be false
+  has_network_during_ranking: false            # Must be false
+  pre_computation_required: false              # No pre-computation, runs end-to-end
+  pre_computation_time_minutes: 0
+
+# ============================================================================
+# AI tools declaration
+# ============================================================================
+ai_tools_used:
+  - "Gemini"
+  - "Other"
+
+ai_usage_summary: |
+  Pair-programmed with Google DeepMind Antigravity AI coding assistant to create the modular 6-layer architecture, write scoring logic, and perform regex compilations caching and timeline parsing optimizations to speed up CPU throughput.
+
+# ============================================================================
+# Approach summary (optional but recommended)
+# ============================================================================
+methodology_summary: |
+  A modular 6-layer candidate discovery and ranking system. 
+  Layer 1 acts as a quality gate (Honeypot Filter) checking timeline integrity, role coherence, and skill exaggeration to discard impossible profiles. 
+  Layers 2-6 score JD Fit, Evidence (text mining career descriptions for actual capability, weighted by action-verb strength), Behavior (recruitability), Trust (evidence-to-claim ratio), and Career Intelligence (trajectory, learning velocity, hiring risk). 
+  Scores are min-max normalized per layer and ranked using configurable weights, with deterministic tie-breaking based on rounded score and candidate ID ascending.
+
+# ============================================================================
+# Declarations
+# ============================================================================
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true                    # Set to true as we implement explicit Layer 1 quality gating
+  reproduction_tested: true

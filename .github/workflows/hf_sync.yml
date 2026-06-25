@@ -19,5 +19,6 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           # Force push to HF Spaces. 
-          # Replace 'voldigo/ai-recruiter' with your HF account name and Space name.
-          git push --force https://voldigo:$HF_TOKEN@huggingface.co/spaces/voldigo/ai-recruiter
+          # Replace '<HF_USERNAME>/<HF_SPACE_NAME>' with your actual Hugging Face account username and Space name.
+          git push --force https://<HF_USERNAME>:$HF_TOKEN@huggingface.co/spaces/<HF_USERNAME>/<HF_SPACE_NAME>
+
