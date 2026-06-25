@@ -1,0 +1,7 @@
+[
+  {"name": "Asha Patel", "title": "Backend Engineer", "skills": ["Python", "Django", "PostgreSQL", "AWS"], "experience_years": 5, "summary": "Built scalable REST APIs and microservices for fintech products.", "location": "Mumbai"},
+  {"name": "Rohan Mehta", "title": "Data Scientist", "skills": ["Python", "Machine Learning", "Pandas", "SQL"], "experience_years": 3, "summary": "Worked on churn prediction and recommendation systems.", "location": "Bangalore"},
+  {"name": "Priya Singh", "title": "Frontend Developer", "skills": ["React", "JavaScript", "CSS", "TypeScript"], "experience_years": 4, "summary": "Built responsive web apps and design systems.", "location": "Pune"},
+  {"name": "Karan Shah", "title": "ML Engineer", "skills": ["Python", "PyTorch", "NLP", "Transformers", "AWS"], "experience_years": 6, "summary": "Deployed LLM-based retrieval and ranking systems in production.", "location": "Mumbai"},
+  {"name": "Neha Verma", "title": "DevOps Engineer", "skills": ["Docker", "Kubernetes", "AWS", "CI/CD"], "experience_years": 7, "summary": "Managed cloud infrastructure and deployment pipelines.", "location": "Delhi"}
+]
