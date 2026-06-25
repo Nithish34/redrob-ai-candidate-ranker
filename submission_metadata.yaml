@@ -25,7 +25,7 @@ github_repo: "https://github.com/Nithish34/ai-recruiter-"
 # Required. Must be reachable. 
 # If private, grant access to organizers at Stage 3.
 
-sandbox_link: "https://huggingface.co/spaces/<HF_USERNAME>/<HF_SPACE_NAME>"
+sandbox_link: "https://huggingface.co/spaces/voldigo/ai-recruiter"
 # Required. Your Gradio hosted Space link.
 
 reproduce_command: "python app/main.py --candidates ./candidates.jsonl --out ./submission.csv"
