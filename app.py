@@ -359,7 +359,6 @@ with gr.Blocks(
                 datatype=["number", "str", "str", "str", "str", "number", "str", "str"],
                 label="📊 Ranked Results",
                 wrap=True,
-                max_rows=20,
             )
 
             run_btn_1.click(
@@ -402,7 +401,6 @@ with gr.Blocks(
                 datatype=["number", "str", "str", "str", "str", "number", "str", "str"],
                 label="📊 Sample Ranked Results",
                 wrap=True,
-                max_rows=20,
             )
 
             run_btn_2.click(
