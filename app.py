@@ -60,7 +60,7 @@ def _build_outputs(results: list[dict], top_n: int = 100):
             r.get("current_title", ""),
             f"{r.get('years_of_experience', 0):.1f}",
             r.get("ai_skill_count", 0),
-            "✅" if r.get("open_to_work") else "❌",
+            "Yes" if r.get("open_to_work") else "No",
             r["reasoning"],
         ])
 
@@ -98,40 +98,40 @@ def _build_outputs(results: list[dict], top_n: int = 100):
 def process_upload(file_obj, top_n_slider):
     if file_obj is None:
         return (
-            gr.update(value=[], headers=[]),
+            gr.update(value=[]),
             None,
-            "⚠️ Please upload a `.json` or `.jsonl` file first.",
+            "Please upload a `.json` or `.jsonl` file first.",
         )
     try:
         raw = Path(file_obj.name).read_bytes()
         results = score_from_json_bytes(raw)
         rows, headers, csv_path, summary = _build_outputs(results, int(top_n_slider))
-        return gr.update(value=rows, headers=headers), csv_path, summary
+        return gr.update(value=rows), csv_path, summary
     except Exception as exc:
         return (
-            gr.update(value=[], headers=[]),
+            gr.update(value=[]),
             None,
-            f"❌ Error: {exc}",
+            f"Error: {exc}",
         )
 
 
 def process_sample(top_n_slider):
     if not SAMPLE_FILE.exists():
         return (
-            gr.update(value=[], headers=[]),
+            gr.update(value=[]),
             None,
-            f"❌ Sample file not found at `{SAMPLE_FILE}`.",
+            f"Sample file not found at `{SAMPLE_FILE}`.",
         )
     try:
         raw = SAMPLE_FILE.read_bytes()
         results = score_from_json_bytes(raw)
         rows, headers, csv_path, summary = _build_outputs(results, int(top_n_slider))
-        return gr.update(value=rows, headers=headers), csv_path, summary
+        return gr.update(value=rows), csv_path, summary
     except Exception as exc:
         return (
-            gr.update(value=[], headers=[]),
+            gr.update(value=[]),
             None,
-            f"❌ Error: {exc}",
+            f"Error: {exc}",
         )
 
 
