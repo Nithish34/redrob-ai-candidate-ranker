@@ -26,4 +26,4 @@ jobs:
           find . -name "*.docx" -delete
           git add .
           git commit -m "Sync to HF Space"
-          git push --force https://voldigo:$HF_TOKEN@huggingface.co/spaces/voldigo/ai-recruiter hf-sync:main
+          git push --force https://voldigo:$HF_TOKEN@huggingface.co/spaces/voldigo/redrob-ai-candidate-ranker hf-sync:main
