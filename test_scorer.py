@@ -25,7 +25,7 @@ class ScorerTests(unittest.TestCase):
         second = score_from_json_bytes(raw, scoring_date=DEFAULT_SCORING_DATE)
 
         self.assertEqual(first, second)
-        self.assertEqual(len(first), 10)
+        self.assertEqual(len(first), 100)
         self.assertTrue(
             all(
                 left["score"] >= right["score"]
@@ -79,8 +79,8 @@ class ScorerTests(unittest.TestCase):
     # Phase 5 — sample file availability
     # ------------------------------------------------------------------
 
-    def test_sample_file_exists_with_10_records(self):
-        """sample_candidates.json must be committed and contain exactly 10 records."""
+    def test_sample_file_exists_with_100_records(self):
+        """sample_candidates.json must be committed and contain exactly 100 records."""
         self.assertTrue(
             SAMPLE_FILE.exists(),
             "sample_candidates.json must be committed to the repository",
@@ -88,8 +88,8 @@ class ScorerTests(unittest.TestCase):
         candidates = json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))
         self.assertEqual(
             len(candidates),
-            10,
-            f"sample_candidates.json must contain exactly 10 records, got {len(candidates)}",
+            100,
+            f"sample_candidates.json must contain exactly 100 records, got {len(candidates)}",
         )
 
     # ------------------------------------------------------------------
