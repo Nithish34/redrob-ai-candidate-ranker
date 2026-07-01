@@ -23,12 +23,13 @@ license: mit
 
 ## 🎯 What This Does
 
-Given a pool of candidate profiles (JSON/JSONL format), this system **scores and ranks the top 100 most suitable candidates** for an AI/ML Engineer role using a deterministic, interpretable, rule-based scoring engine.
+Given a pool of candidate profiles, this system **scores and ranks the top 100 most suitable candidates** for an AI/ML Engineer role using a deterministic, interpretable, rule-based scoring engine.
 
-- ✅ **100,000 candidates scored in ~90 seconds** on a standard CPU
+- ✅ **100,000 JSONL candidates scored in ~90 seconds** by the streaming CLI on a standard CPU
 - ✅ **No GPU required** — pure Python, stdlib only for the core ranker
 - ✅ **No external API calls** during ranking — fully offline
 - ✅ **Explainable output** — every candidate gets a one-line reasoning string
+- ✅ **Reproducible recency scoring** — fixed scoring date: `2026-07-01`
 
 ---
 
@@ -39,6 +40,24 @@ scorer.py        ← shared scoring engine (pure Python, no deps)
     ├── rank.py  ← CLI: streams candidates.jsonl → submission.csv
     └── app.py   ← Gradio web UI for Hugging Face Space
 ```
+
+The CLI accepts strict JSONL for the full dataset. The web UI accepts JSON or
+JSONL files up to 50 MB and is intended for smaller interactive checks. The
+Live Preview reads the committed top-100 `submission.csv` produced by the full
+100K run rather than loading the private dataset into the Space.
+
+### Dataset availability
+
+The 100K competition dataset is intentionally excluded from Git and Hugging
+Face because it is large and may be access-controlled. Place the provided
+`candidates.jsonl` at:
+
+```text
+[PUB] India_runs_data_and_ai_challenge/India_runs_data_and_ai_challenge/candidates.jsonl
+```
+
+The repository includes `sample_candidates.json` for tests and
+`submission.csv` for the prebuilt Live Preview.
 
 ---
 
@@ -54,7 +73,7 @@ scorer.py        ← shared scoring engine (pure Python, no deps)
 | 📍 Availability | **10%** | Open-to-work, notice period, relocation, work mode |
 | 🎓 Education | **10%** | Institution tier × degree level × field relevance |
 
-### Behavioral Modifier (×0.80 – ×1.20)
+### Behavioral Modifier (×0.85 – ×1.15)
 
 Platform signals that multiplicatively adjust the composite score:
 - Profile completeness score
@@ -76,30 +95,38 @@ Skills with `endorsements < 2 AND duration_months < 4` receive a **0.45× qualit
 
 ```bash
 # Install (no extra deps for CLI)
-git clone https://github.com/Nithish34/ai-recruiter-
-cd ai-recruiter-
+git clone https://github.com/Nithish34/redrob-ai-candidate-ranker
+cd redrob-ai-candidate-ranker
 
 # Generate submission.csv from full dataset
 python rank.py \
   --candidates "./[PUB] India_runs_data_and_ai_challenge/India_runs_data_and_ai_challenge/candidates.jsonl" \
-  --out submission.csv
+  --out submission.csv \
+  --scoring-date 2026-07-01
 
-# Validate submission
-python "[PUB] India_runs_data_and_ai_challenge/India_runs_data_and_ai_challenge/validate_submission.py" submission.csv
+# Validate the output contract
+python inspect_submission.py submission.csv
 ```
 
 ### Run the Gradio App Locally
 
 ```bash
-pip install gradio>=4.44.0
+pip install -r requirements.txt
 python app.py
 # Open http://localhost:7860
+```
+
+### Run regression tests
+
+```bash
+python -m unittest discover -v
+python inspect_submission.py submission.csv
 ```
 
 ### One-liner (competition reproduce command)
 
 ```bash
-python rank.py --candidates ./[PUB]\ India_runs_data_and_ai_challenge/India_runs_data_and_ai_challenge/candidates.jsonl --out ./submission.csv
+python rank.py --candidates ./[PUB]\ India_runs_data_and_ai_challenge/India_runs_data_and_ai_challenge/candidates.jsonl --out ./submission.csv --scoring-date 2026-07-01
 ```
 
 ---
@@ -113,7 +140,9 @@ python rank.py --candidates ./[PUB]\ India_runs_data_and_ai_challenge/India_runs
 ├── app.py                     # Gradio HF Space UI
 ├── submission.csv             # Prebuilt top-100 result from the 100K run
 ├── sample_candidates.json     # Small fallback demo dataset
-├── requirements.txt           # gradio>=4.44.0
+├── requirements.txt           # pinned Space dependencies
+├── inspect_submission.py      # strict output contract validator
+├── test_*.py                  # standard-library regression suite
 ├── submission_metadata.yaml   # Hackathon submission metadata
 └── [PUB] India_runs_data_and_ai_challenge/
     └── India_runs_data_and_ai_challenge/
@@ -142,8 +171,9 @@ CAND_0005678,2,0.9105,"Data Scientist with 4.8 yrs; 9 AI core skills; response r
 
 | Constraint | Status |
 |---|---|
-| Runtime ≤ 5 min on CPU | ✅ ~90 seconds for 100K |
-| RAM ≤ 16 GB | ✅ Peak ~800 MB (heap of ≤1000 items) |
+| Runtime ≤ 5 min on CPU | ✅ ~90 seconds for 100K (CLI) |
+| Web upload latency | ✅ < 5 seconds for up to 1,000 records |
+| RAM ≤ 16 GB | ✅ Streaming CLI retains only the requested top-N heap |
 | No GPU inference | ✅ Pure Python |
 | No network during ranking | ✅ Fully offline |
 | Exactly 100 rows output | ✅ |

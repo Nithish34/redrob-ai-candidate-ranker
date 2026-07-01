@@ -14,6 +14,55 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Verify Required Space Files
+        run: |
+          test -f app.py
+          test -f scorer.py
+          test -f rank.py
+          test -f submission.csv
+          test -f sample_candidates.json
+
+      - name: Run Regression Tests
+        run: |
+          python -m py_compile app.py scorer.py rank.py inspect_submission.py
+          python -m unittest discover -v
+          python inspect_submission.py submission.csv
+
+      - name: Smoke Test — Full Ranking Pipeline
+        run: |
+          python -c "
+          import json, sys
+          from pathlib import Path
+          from scorer import score_from_json_bytes, DEFAULT_SCORING_DATE
+
+          sample = Path('sample_candidates.json')
+          assert sample.exists(), 'sample_candidates.json is missing from the repo'
+          results = score_from_json_bytes(sample.read_bytes(), scoring_date=DEFAULT_SCORING_DATE)
+          assert len(results) == 10, f'Expected 10 results from sample, got {len(results)}'
+          scores = [r[\"score\"] for r in results]
+          assert all(a >= b for a, b in zip(scores, scores[1:])), \
+              'Scores are not sorted descending'
+          print(f'Pipeline smoke test PASSED: {len(results)} candidates ranked, '
+                f'top score={results[0][\"score\"]:.4f}')
+          "
+          python -c "
+          import app, sys
+          assert app.PREBUILT_SUBMISSION.exists(), \
+              f'submission.csv not found at {app.PREBUILT_SUBMISSION}'
+          print('submission.csv present — Live Preview tab will work')
+          "
+
       - name: Push to HF Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}

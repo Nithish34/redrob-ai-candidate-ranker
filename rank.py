@@ -23,7 +23,12 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Import shared scoring engine
 # ---------------------------------------------------------------------------
-from scorer import score_candidate
+from scorer import (
+    DEFAULT_SCORING_DATE,
+    parse_scoring_date,
+    score_candidate,
+    validate_candidate,
+)
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -47,6 +52,8 @@ def rank_candidates(
     candidates_path: Path,
     top_n: int = 100,
     verbose: bool = True,
+    scoring_date: str | None = None,
+    require_exact_top: bool = True,
 ) -> list[dict]:
     """
     Stream candidates.jsonl one line at a time, score every candidate,
@@ -55,31 +62,52 @@ def rank_candidates(
     Uses a min-heap of size top_n so RAM stays well under 1 GB even for
     the full 100 K-candidate file.
     """
-    heap: list[tuple] = []   # (score, candidate_id, result_dict)
+    if top_n <= 0:
+        raise ValueError("top_n must be greater than zero.")
+    if candidates_path.suffix.lower() != ".jsonl":
+        raise ValueError("CLI ranking accepts JSONL input only.")
+
+    effective_date = parse_scoring_date(scoring_date)
+    heap: list[tuple] = []   # (score, negative numeric ID, result_dict)
+    seen_ids: set[str] = set()
     count = 0
-    skipped = 0
     t0 = time.time()
 
     with open(candidates_path, "r", encoding="utf-8") as fh:
-        for raw_line in fh:
+        for line_number, raw_line in enumerate(fh, 1):
             line = raw_line.strip()
             if not line:
                 continue
 
             try:
                 candidate = json.loads(line)
-            except json.JSONDecodeError:
-                skipped += 1
-                continue
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"Invalid JSON on line {line_number}: {exc.msg}"
+                ) from exc
 
-            result = score_candidate(candidate)
+            candidate = validate_candidate(candidate, f"line {line_number}")
+            candidate_id = candidate["candidate_id"]
+            if candidate_id in seen_ids:
+                raise ValueError(
+                    f"Duplicate candidate_id {candidate_id} on line {line_number}."
+                )
+            seen_ids.add(candidate_id)
+
+            try:
+                result = score_candidate(candidate, scoring_date=effective_date)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"Candidate on line {line_number} cannot be scored: {exc}"
+                ) from exc
             count += 1
 
-            entry = (result["score"], result["candidate_id"], result)
+            numeric_id = int(result["candidate_id"].removeprefix("CAND_"))
+            entry = (result["score"], -numeric_id, result)
 
             if len(heap) < top_n:
                 heapq.heappush(heap, entry)
-            elif entry[0] > heap[0][0]:
+            elif entry[:2] > heap[0][:2]:
                 heapq.heapreplace(heap, entry)
 
             if verbose and count % 10_000 == 0:
@@ -95,12 +123,19 @@ def rank_candidates(
     if verbose:
         print(
             f"\n  [OK] Finished: {count:,} candidates scored in {elapsed:.1f}s "
-            f"({skipped} lines skipped)",
+            f"(0 lines skipped)",
             flush=True,
         )
 
+    if count == 0:
+        raise ValueError("No candidate records were found in the JSONL file.")
+    if require_exact_top and count < top_n:
+        raise ValueError(
+            f"Input contains {count} candidates, fewer than the requested top {top_n}."
+        )
+
     # Sort: primary = score descending, tie-break = candidate_id ascending
-    top = sorted(heap, key=lambda e: (-e[0], e[1]))
+    top = sorted(heap, key=lambda e: (-e[0], e[2]["candidate_id"]))
     return [e[2] for e in top[:top_n]]
 
 
@@ -154,6 +189,11 @@ def main() -> None:
         action="store_true",
         help="Suppress progress output",
     )
+    parser.add_argument(
+        "--scoring-date",
+        default=DEFAULT_SCORING_DATE.isoformat(),
+        help="Fixed date used for activity-recency scoring (YYYY-MM-DD)",
+    )
     args = parser.parse_args()
 
     # Validate inputs
@@ -164,6 +204,10 @@ def main() -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+    if args.candidates.suffix.lower() != ".jsonl":
+        parser.error("--candidates must point to a .jsonl file")
+    if args.top <= 0:
+        parser.error("--top must be greater than zero")
 
     print("=" * 60)
     print("  Redrob AI Candidate Ranker")
@@ -171,11 +215,21 @@ def main() -> None:
     print(f"  Candidates : {args.candidates}")
     print(f"  Output     : {args.out}")
     print(f"  Top-N      : {args.top}")
+    print(f"  Score date : {args.scoring_date}")
     print()
 
-    results = rank_candidates(args.candidates, top_n=args.top, verbose=not args.quiet)
-
-    write_submission(results, args.out)
+    try:
+        results = rank_candidates(
+            args.candidates,
+            top_n=args.top,
+            verbose=not args.quiet,
+            scoring_date=args.scoring_date,
+            require_exact_top=True,
+        )
+        write_submission(results, args.out)
+    except (OSError, ValueError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     # ── Pretty-print top 5 ──────────────────────────────────────────────────
     print()

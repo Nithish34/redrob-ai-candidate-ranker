@@ -1,29 +1,92 @@
+#!/usr/bin/env python3
+"""Validate a generated competition submission and fail on any contract error."""
+
+import argparse
 import csv
+import re
+import sys
+from pathlib import Path
 
-rows = list(csv.DictReader(open('submission.csv', encoding='utf-8')))
-print(f'Total rows: {len(rows)}')
-print()
-print('Top 10:')
-for r in rows[:10]:
-    rk = r['rank']
-    cid = r['candidate_id']
-    sc = r['score']
-    rs = r['reasoning']
-    print(f'  #{rk:>3}  {cid}  score={sc}  {rs}')
 
-print()
-print('Rank 50 and 100:')
-r50 = rows[49]
-r100 = rows[99]
-print(f'  #{r50["rank"]:>3}  {r50["candidate_id"]}  score={r50["score"]}  {r50["reasoning"]}')
-print(f'  #{r100["rank"]:>3}  {r100["candidate_id"]}  score={r100["score"]}  {r100["reasoning"]}')
+EXPECTED_COLUMNS = ["candidate_id", "rank", "score", "reasoning"]
+CANDIDATE_ID_PATTERN = re.compile(r"^CAND_\d{7}$")
 
-scores = [float(r['score']) for r in rows]
-print()
-print(f'Score range    : {scores[-1]:.4f} -- {scores[0]:.4f}')
-ok = all(scores[i] >= scores[i+1] for i in range(len(scores)-1))
-print(f'Non-increasing : {ok}')
-ids_unique = len(set(r['candidate_id'] for r in rows)) == 100
-print(f'Unique IDs     : {ids_unique}')
-ranks_ok = sorted([int(r['rank']) for r in rows]) == list(range(1, 101))
-print(f'Ranks 1-100    : {ranks_ok}')
+
+def validate_submission(path: Path, expected_rows: int = 100) -> list[str]:
+    errors: list[str] = []
+    if not path.exists():
+        return [f"File not found: {path}"]
+
+    try:
+        with path.open("r", encoding="utf-8", newline="") as fh:
+            reader = csv.DictReader(fh)
+            if reader.fieldnames != EXPECTED_COLUMNS:
+                errors.append(
+                    f"Expected columns {EXPECTED_COLUMNS}, got {reader.fieldnames or []}."
+                )
+            rows = list(reader)
+    except (OSError, UnicodeDecodeError, csv.Error) as exc:
+        return [f"Could not read submission: {exc}"]
+
+    if len(rows) != expected_rows:
+        errors.append(f"Expected {expected_rows} rows, got {len(rows)}.")
+
+    candidate_ids: list[str] = []
+    ranks: list[int] = []
+    scores: list[float] = []
+
+    for line_number, row in enumerate(rows, 2):
+        candidate_id = row.get("candidate_id", "")
+        candidate_ids.append(candidate_id)
+        if not CANDIDATE_ID_PATTERN.fullmatch(candidate_id):
+            errors.append(f"Line {line_number}: invalid candidate_id {candidate_id!r}.")
+
+        try:
+            ranks.append(int(row.get("rank", "")))
+        except (TypeError, ValueError):
+            errors.append(f"Line {line_number}: rank must be an integer.")
+
+        try:
+            score = float(row.get("score", ""))
+            scores.append(score)
+            if not 0.0 <= score <= 1.0:
+                errors.append(f"Line {line_number}: score must be between 0 and 1.")
+        except (TypeError, ValueError):
+            errors.append(f"Line {line_number}: score must be numeric.")
+
+        if not row.get("reasoning", "").strip():
+            errors.append(f"Line {line_number}: reasoning is required.")
+
+    if len(candidate_ids) != len(set(candidate_ids)):
+        errors.append("candidate_id values must be unique.")
+    if ranks != list(range(1, len(rows) + 1)):
+        errors.append("Ranks must be sequential and ordered from 1.")
+    if len(scores) == len(rows) and any(
+        left < right for left, right in zip(scores, scores[1:])
+    ):
+        errors.append("Scores must be non-increasing.")
+
+    return errors
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("submission", nargs="?", type=Path, default=Path("submission.csv"))
+    parser.add_argument("--expected-rows", type=int, default=100)
+    args = parser.parse_args()
+
+    errors = validate_submission(args.submission, args.expected_rows)
+    if errors:
+        print("Submission validation failed:", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        sys.exit(1)
+
+    print(
+        f"Submission is valid: {args.expected_rows} ranked candidates in "
+        f"{args.submission}"
+    )
+
+
+if __name__ == "__main__":
+    main()

@@ -18,11 +18,13 @@ import io
 import json
 import os
 import tempfile
+import time
 from pathlib import Path
 
 import gradio as gr
 
-from scorer import score_from_json_bytes, WEIGHTS
+from rank import rank_candidates
+from scorer import DEFAULT_SCORING_DATE, score_from_json_bytes, WEIGHTS
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -30,10 +32,26 @@ from scorer import score_from_json_bytes, WEIGHTS
 _HERE = Path(__file__).parent
 SAMPLE_FILE = _HERE / "sample_candidates.json"
 PREBUILT_SUBMISSION = _HERE / "submission.csv"
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+MAX_JSON_RECORDS = 10_000
+GENERATED_FILE_TTL_SECONDS = 60 * 60
+GENERATED_FILE_DIR = Path(tempfile.gettempdir()) / "redrob-candidate-ranker"
 
 # ---------------------------------------------------------------------------
 # Helper: build results table + CSV bytes
 # ---------------------------------------------------------------------------
+
+def _prune_generated_files() -> None:
+    """Remove expired generated downloads so a long-running Space stays bounded."""
+    GENERATED_FILE_DIR.mkdir(parents=True, exist_ok=True)
+    cutoff = time.time() - GENERATED_FILE_TTL_SECONDS
+    for path in GENERATED_FILE_DIR.glob("submission-*.csv"):
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+        except OSError:
+            pass
+
 
 def _build_outputs(results: list[dict], top_n: int = 100):
     """
@@ -67,8 +85,15 @@ def _build_outputs(results: list[dict], top_n: int = 100):
     for rank, r in enumerate(top, 1):
         writer.writerow([r["candidate_id"], rank, f"{r['score']:.4f}", r["reasoning"]])
 
+    _prune_generated_files()
     tmp = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".csv", delete=False, encoding="utf-8", newline=""
+        mode="w",
+        prefix="submission-",
+        suffix=".csv",
+        delete=False,
+        encoding="utf-8",
+        newline="",
+        dir=GENERATED_FILE_DIR,
     )
     tmp.write(buf.getvalue())
     tmp.close()
@@ -80,7 +105,8 @@ def _build_outputs(results: list[dict], top_n: int = 100):
         f"### ✅ Ranked {total} candidates — showing top {len(top)}\n\n"
         f"**🥇 #1:** `{top1.get('candidate_id','—')}` — "
         f"score **{top1.get('score', 0):.4f}** — {top1.get('reasoning','')}\n\n"
-        f"Score range: **{top[-1]['score']:.4f}** – **{top[0]['score']:.4f}**"
+        f"Score range: **{top[-1]['score']:.4f}** – **{top[0]['score']:.4f}**\n\n"
+        f"Scoring date: **{DEFAULT_SCORING_DATE.isoformat()}**"
         if top else "No results."
     )
 
@@ -99,9 +125,54 @@ def process_upload(file_obj, top_n_slider):
             "Please upload a `.json` or `.jsonl` file first.",
         )
     try:
-        raw = Path(file_obj.name).read_bytes()
-        results = score_from_json_bytes(raw)
-        rows, headers, csv_path, summary = _build_outputs(results, int(top_n_slider))
+        top_n = int(top_n_slider)
+        if top_n <= 0:
+            raise ValueError("Top-N must be greater than zero.")
+
+        if isinstance(file_obj, (str, Path)):
+            uploaded_path = Path(file_obj)
+        elif hasattr(file_obj, "name"):
+            uploaded_path = Path(file_obj.name)
+        elif isinstance(file_obj, bytes):
+            if len(file_obj) > MAX_UPLOAD_BYTES:
+                raise ValueError("Upload exceeds the 50 MB web limit.")
+            results = score_from_json_bytes(
+                file_obj,
+                scoring_date=DEFAULT_SCORING_DATE,
+                max_records=MAX_JSON_RECORDS,
+            )
+            rows, headers, csv_path, summary = _build_outputs(results, top_n)
+            return gr.update(value=rows), csv_path, summary
+        else:
+            raise ValueError("Unsupported uploaded file value.")
+
+        if not uploaded_path.exists():
+            raise ValueError("Uploaded file is no longer available.")
+        if uploaded_path.stat().st_size > MAX_UPLOAD_BYTES:
+            raise ValueError(
+                "Upload exceeds the 50 MB web limit. "
+                "Use rank.py for the full 100K JSONL dataset."
+            )
+
+        suffix = uploaded_path.suffix.lower()
+        if suffix == ".jsonl":
+            results = rank_candidates(
+                uploaded_path,
+                top_n=top_n,
+                verbose=False,
+                scoring_date=DEFAULT_SCORING_DATE.isoformat(),
+                require_exact_top=False,
+            )
+        elif suffix == ".json":
+            results = score_from_json_bytes(
+                uploaded_path.read_bytes(),
+                scoring_date=DEFAULT_SCORING_DATE,
+                max_records=MAX_JSON_RECORDS,
+            )
+        else:
+            raise ValueError("Only .json and .jsonl files are supported.")
+
+        rows, headers, csv_path, summary = _build_outputs(results, top_n)
         return gr.update(value=rows), csv_path, summary
     except Exception as exc:
         return (
@@ -162,7 +233,11 @@ def process_prebuilt_preview(top_n_slider):
 
         if SAMPLE_FILE.exists():
             raw = SAMPLE_FILE.read_bytes()
-            results = score_from_json_bytes(raw)
+            results = score_from_json_bytes(
+                raw,
+                scoring_date=DEFAULT_SCORING_DATE,
+                max_records=MAX_JSON_RECORDS,
+            )
             top = results[:top_n]
             rows = [
                 [
@@ -203,6 +278,8 @@ METHODOLOGY_MD = f"""
 
 This ranker uses a **5-component weighted scoring system** with a multiplicative behavioral modifier.
 All logic is deterministic — no ML inference, no network calls.
+Activity recency is evaluated against the fixed scoring date
+**{DEFAULT_SCORING_DATE.isoformat()}**.
 
 ---
 
@@ -218,7 +295,7 @@ All logic is deterministic — no ML inference, no network calls.
 
 ---
 
-### Behavioral Modifier  ×(0.80 – 1.20)
+### Behavioral Modifier  ×(0.85 – 1.15)
 
 Multiplicative adjustment using platform-specific signals:
 
@@ -252,7 +329,8 @@ Scores are **non-increasing by rank** (enforced by sort). Tie-break: ascending `
 ### Runtime
 
 ~90 seconds for **100,000 candidates** on a standard CPU with 16 GB RAM.
-Peak heap size ≤ 1,000 items (min-heap). Total memory usage < 800 MB.
+The streaming CLI retains only the requested top-N heap. Interactive web
+uploads are capped at 50 MB; the full dataset should be processed with `rank.py`.
 """
 
 # ---------------------------------------------------------------------------
@@ -382,7 +460,9 @@ with gr.Blocks(
         with gr.TabItem("📤 Upload & Rank", id="upload_tab"):
             gr.Markdown(
                 "Upload your own **`.json`** (array) or **`.jsonl`** (one candidate per line) file. "
-                "The ranker will score every candidate and return a competition-ready `submission.csv`."
+                "The ranker will score every candidate and return a competition-ready "
+                "`submission.csv`. Web uploads are limited to **50 MB**; use `rank.py` "
+                "for the full 100K dataset."
             )
 
             with gr.Row():

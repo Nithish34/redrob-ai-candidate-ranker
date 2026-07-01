@@ -23,7 +23,8 @@ github_repo: "https://github.com/Nithish34/ai-recruiter-"
 
 sandbox_link: "https://huggingface.co/spaces/voldigo/redrob-ai-candidate-ranker"
 
-reproduce_command: "python rank.py --candidates ./[PUB] India_runs_data_and_ai_challenge/India_runs_data_and_ai_challenge/candidates.jsonl --out ./submission.csv"
+reproduce_command: "python rank.py --candidates ./[PUB] India_runs_data_and_ai_challenge/India_runs_data_and_ai_challenge/candidates.jsonl --out ./submission.csv --scoring-date 2026-07-01"
+scoring_date: "2026-07-01"
 
 # ============================================================================
 # Compute environment
@@ -63,7 +64,7 @@ methodology_summary: |
   soft optimum at 3-8 years with smooth decay outside; (4) Availability &
   Logistics (10%) — open-to-work flag, notice period, relocation willingness,
   work mode; (5) Education (10%) — institution tier, degree level, field
-  relevance. A multiplicative Behavioral Modifier (x0.80-x1.20) adjusts the
+  relevance. A multiplicative Behavioral Modifier (x0.85-x1.15) adjusts the
   final score using platform signals: profile completeness, recruiter response
   rate, GitHub activity, interview completion rate, and recency.
   Runtime: ~90 seconds for 100K candidates on CPU, <1 GB RAM.

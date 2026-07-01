@@ -11,14 +11,18 @@ Scoring Components
 3. Years of Experience       — 15%
 4. Availability & Logistics  — 10%
 5. Education                 — 10%
-+ Behavioral Modifier        — multiplicative (×0.80 – ×1.20)
++ Behavioral Modifier        — multiplicative (×0.85 – ×1.15)
 """
 
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from typing import Any
+
+DEFAULT_SCORING_DATE = date(2026, 7, 1)
+CANDIDATE_ID_PATTERN = re.compile(r"^CAND_\d{7}$")
 
 # ---------------------------------------------------------------------------
 # 1. AI/ML Skill Taxonomy  (name → importance weight 0-1)
@@ -236,10 +240,6 @@ _PROF_MULT = {"beginner": 0.50, "intermediate": 0.75,
 # Helper utilities
 # ---------------------------------------------------------------------------
 
-def _today() -> date:
-    return date.today()
-
-
 def _parse_date(ds: str | None) -> date | None:
     if not ds:
         return None
@@ -249,10 +249,25 @@ def _parse_date(ds: str | None) -> date | None:
         return None
 
 
-def _days_since(ds: str | None) -> int:
+def parse_scoring_date(value: date | str | None = None) -> date:
+    """Return a validated scoring date, using the reproducible project default."""
+    if value is None:
+        return DEFAULT_SCORING_DATE
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Scoring date must use YYYY-MM-DD format.") from exc
+
+
+def _days_since(ds: str | None, scoring_date: date) -> int:
     """Days since date string. Returns 9999 if missing/unparseable."""
     d = _parse_date(ds)
-    return 9999 if d is None else (_today() - d).days
+    if d is None:
+        return 9999
+    days = (scoring_date - d).days
+    return 365 if days < 0 else days
 
 
 def _clamp(v: float, lo: float = 0.0, hi: float = 1.0) -> float:
@@ -428,7 +443,7 @@ def _score_education(candidate: dict) -> float:
     return _clamp(best)
 
 
-def _behavioral_modifier(candidate: dict) -> float:
+def _behavioral_modifier(candidate: dict, scoring_date: date) -> float:
     sig = candidate.get("redrob_signals", {})
     mod = 1.0
 
@@ -450,7 +465,7 @@ def _behavioral_modifier(candidate: dict) -> float:
     mod += (icr - 0.5) * 0.04
 
     # Recency of activity
-    days_inactive = _days_since(sig.get("last_active_date"))
+    days_inactive = _days_since(sig.get("last_active_date"), scoring_date)
     if days_inactive < 30:
         mod += 0.02
     elif days_inactive < 60:
@@ -487,7 +502,39 @@ WEIGHTS = {
 # Public API
 # ===========================================================================
 
-def score_candidate(candidate: dict) -> dict:
+def validate_candidate(candidate: Any, location: str = "candidate") -> dict:
+    """Validate the minimum record shape required by the scoring engine."""
+    if not isinstance(candidate, dict):
+        raise ValueError(f"{location} must be a JSON object.")
+
+    candidate_id = candidate.get("candidate_id")
+    if not isinstance(candidate_id, str) or not CANDIDATE_ID_PATTERN.fullmatch(candidate_id):
+        raise ValueError(
+            f"{location} has an invalid candidate_id; expected CAND_ followed by 7 digits."
+        )
+
+    for field in ("profile", "redrob_signals"):
+        value = candidate.get(field, {})
+        if not isinstance(value, dict):
+            raise ValueError(f"{location}.{field} must be a JSON object.")
+
+    for field in ("skills", "career_history", "education"):
+        value = candidate.get(field, [])
+        if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
+            raise ValueError(f"{location}.{field} must be a list of JSON objects.")
+
+    try:
+        float(candidate.get("profile", {}).get("years_of_experience", 0))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{location}.profile.years_of_experience must be numeric.") from exc
+
+    return candidate
+
+
+def score_candidate(
+    candidate: dict,
+    scoring_date: date | str | None = None,
+) -> dict:
     """
     Score a single candidate profile dict.
 
@@ -500,12 +547,15 @@ def score_candidate(candidate: dict) -> dict:
         ai_skill_count– int
         reasoning     – str (one-line human-readable justification)
     """
+    candidate = validate_candidate(candidate)
+    effective_date = parse_scoring_date(scoring_date)
+
     skills_s, ai_skill_count = _score_skills(candidate)
     title_s     = _score_title(candidate)
     exp_s       = _score_experience(candidate)
     avail_s     = _score_availability(candidate)
     edu_s       = _score_education(candidate)
-    beh_mod     = _behavioral_modifier(candidate)
+    beh_mod     = _behavioral_modifier(candidate, effective_date)
 
     weighted = (
         skills_s   * WEIGHTS["skills"]
@@ -549,7 +599,11 @@ def score_candidate(candidate: dict) -> dict:
     }
 
 
-def score_from_json_bytes(raw: bytes | str) -> list[dict]:
+def score_from_json_bytes(
+    raw: bytes | str,
+    scoring_date: date | str | None = None,
+    max_records: int | None = None,
+) -> list[dict]:
     """
     Parse JSON or JSONL bytes/str and return scored results sorted by score desc.
     Accepts:
@@ -557,7 +611,10 @@ def score_from_json_bytes(raw: bytes | str) -> list[dict]:
       - JSONL         (one JSON object per line)
     """
     if isinstance(raw, bytes):
-        text = raw.decode("utf-8", errors="replace")
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError("Uploaded file must be valid UTF-8.") from exc
     else:
         text = raw
 
@@ -570,19 +627,44 @@ def score_from_json_bytes(raw: bytes | str) -> list[dict]:
             candidates = json.loads(text)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON array: {e}") from e
+        if not isinstance(candidates, list):
+            raise ValueError("JSON input must contain an array of candidate objects.")
+        # Early type check: report all non-object positions before iterating
+        non_objects = [i + 1 for i, c in enumerate(candidates) if not isinstance(c, dict)]
+        if non_objects:
+            positions = ", ".join(str(p) for p in non_objects[:10])
+            suffix = f" (and {len(non_objects) - 10} more)" if len(non_objects) > 10 else ""
+            raise ValueError(
+                f"JSON array must contain only candidate objects; "
+                f"non-object items found at position(s): {positions}{suffix}"
+            )
     else:
         # JSONL
-        for line in text.splitlines():
+        for line_number, line in enumerate(text.splitlines(), 1):
             line = line.strip()
             if line:
                 try:
                     candidates.append(json.loads(line))
-                except json.JSONDecodeError:
-                    pass  # skip bad lines
+                except json.JSONDecodeError as exc:
+                    raise ValueError(
+                        f"Invalid JSONL record on line {line_number}: {exc.msg}"
+                    ) from exc
 
     if not candidates:
         raise ValueError("No valid candidate records found in uploaded file.")
 
-    results = [score_candidate(c) for c in candidates]
+    if max_records is not None and len(candidates) > max_records:
+        raise ValueError(f"Uploaded file exceeds the {max_records:,}-record web limit.")
+
+    seen_ids: set[str] = set()
+    results = []
+    for index, candidate in enumerate(candidates, 1):
+        validated = validate_candidate(candidate, f"candidate #{index}")
+        candidate_id = validated["candidate_id"]
+        if candidate_id in seen_ids:
+            raise ValueError(f"Duplicate candidate_id: {candidate_id}")
+        seen_ids.add(candidate_id)
+        results.append(score_candidate(validated, scoring_date=scoring_date))
+
     results.sort(key=lambda r: (-r["score"], r["candidate_id"]))
     return results
