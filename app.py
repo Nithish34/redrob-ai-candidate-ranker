@@ -64,7 +64,7 @@ def _build_outputs(results: list[dict], top_n: int = 100):
 
     # ── Table ────────────────────────────────────────────────────────────────
     headers = ["Rank", "Candidate ID", "Score", "Title", "Exp (yrs)",
-               "AI Skills", "Open to Work", "Reasoning"]
+               "Skills", "Open to Work", "Reasoning"]
     rows = []
     for rank, r in enumerate(top, 1):
         rows.append([
@@ -494,7 +494,7 @@ with gr.Blocks(
 
             results_table_1 = gr.Dataframe(
                 headers=["Rank", "Candidate ID", "Score", "Title",
-                         "Exp (yrs)", "AI Skills", "Open to Work", "Reasoning"],
+                         "Exp (yrs)", "Skills", "Open to Work", "Reasoning"],
                 datatype=["number", "str", "str", "str", "str", "number", "str", "str"],
                 label="📊 Ranked Results",
                 wrap=True,
