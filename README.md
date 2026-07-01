@@ -111,12 +111,13 @@ python rank.py --candidates ./[PUB]\ India_runs_data_and_ai_challenge/India_runs
 ├── rank.py                    # CLI ranking script
 ├── scorer.py                  # Shared scoring engine
 ├── app.py                     # Gradio HF Space UI
+├── submission.csv             # Prebuilt top-100 result from the 100K run
+├── sample_candidates.json     # Small fallback demo dataset
 ├── requirements.txt           # gradio>=4.44.0
 ├── submission_metadata.yaml   # Hackathon submission metadata
 └── [PUB] India_runs_data_and_ai_challenge/
     └── India_runs_data_and_ai_challenge/
         ├── candidates.jsonl         # Full dataset (100K candidates, ~487MB)
-        ├── sample_candidates.json   # Small sample for demos
         ├── candidate_schema.json    # JSON schema reference
         ├── sample_submission.csv    # Example output format
         └── validate_submission.py   # Official validation script

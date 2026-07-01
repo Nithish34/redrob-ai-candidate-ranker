@@ -1,0 +1,348 @@
+[
+  {
+    "candidate_id": "CAND_9000001",
+    "profile": {
+      "current_title": "Senior Machine Learning Engineer",
+      "years_of_experience": 6.0,
+      "location": "Bengaluru"
+    },
+    "skills": [
+      {"name": "Python", "proficiency": "expert", "endorsements": 32, "duration_months": 72},
+      {"name": "PyTorch", "proficiency": "advanced", "endorsements": 20, "duration_months": 48},
+      {"name": "Machine Learning", "proficiency": "expert", "endorsements": 38, "duration_months": 72},
+      {"name": "MLOps", "proficiency": "advanced", "endorsements": 14, "duration_months": 30},
+      {"name": "Model Deployment", "proficiency": "advanced", "endorsements": 12, "duration_months": 30}
+    ],
+    "career_history": [
+      {"title": "Machine Learning Engineer", "description": "Built and deployed model training and serving pipelines."}
+    ],
+    "education": [
+      {"tier": "tier_1", "degree": "M.Tech", "field_of_study": "Computer Science"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": true,
+      "notice_period_days": 15,
+      "willing_to_relocate": true,
+      "preferred_work_mode": "flexible",
+      "profile_completeness_score": 96,
+      "recruiter_response_rate": 0.9,
+      "github_activity_score": 88,
+      "interview_completion_rate": 0.95,
+      "last_active_date": "2026-06-20",
+      "verified_email": true,
+      "verified_phone": true,
+      "linkedin_connected": true,
+      "skill_assessment_scores": {"Python": 94, "Machine Learning": 92}
+    }
+  },
+  {
+    "candidate_id": "CAND_9000002",
+    "profile": {
+      "current_title": "NLP Engineer",
+      "years_of_experience": 4.5,
+      "location": "Hyderabad"
+    },
+    "skills": [
+      {"name": "Python", "proficiency": "advanced", "endorsements": 21, "duration_months": 54},
+      {"name": "Natural Language Processing", "proficiency": "expert", "endorsements": 24, "duration_months": 42},
+      {"name": "Transformers", "proficiency": "advanced", "endorsements": 16, "duration_months": 30},
+      {"name": "RAG", "proficiency": "advanced", "endorsements": 10, "duration_months": 18},
+      {"name": "Hugging Face", "proficiency": "advanced", "endorsements": 13, "duration_months": 24}
+    ],
+    "career_history": [
+      {"title": "NLP Engineer", "description": "Developed transformer-based text classification and RAG systems."}
+    ],
+    "education": [
+      {"tier": "tier_2", "degree": "M.S.", "field_of_study": "Artificial Intelligence"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": true,
+      "notice_period_days": 30,
+      "willing_to_relocate": false,
+      "preferred_work_mode": "remote",
+      "profile_completeness_score": 91,
+      "recruiter_response_rate": 0.82,
+      "github_activity_score": 73,
+      "interview_completion_rate": 0.9,
+      "last_active_date": "2026-06-18",
+      "verified_email": true,
+      "verified_phone": true,
+      "linkedin_connected": true
+    }
+  },
+  {
+    "candidate_id": "CAND_9000003",
+    "profile": {
+      "current_title": "Computer Vision Engineer",
+      "years_of_experience": 5.2,
+      "location": "Pune"
+    },
+    "skills": [
+      {"name": "Python", "proficiency": "advanced", "endorsements": 18, "duration_months": 60},
+      {"name": "Computer Vision", "proficiency": "expert", "endorsements": 26, "duration_months": 48},
+      {"name": "PyTorch", "proficiency": "advanced", "endorsements": 15, "duration_months": 36},
+      {"name": "OpenCV", "proficiency": "advanced", "endorsements": 19, "duration_months": 42},
+      {"name": "Object Detection", "proficiency": "advanced", "endorsements": 12, "duration_months": 28}
+    ],
+    "career_history": [
+      {"title": "Computer Vision Engineer", "description": "Trained and optimized object detection models for production."}
+    ],
+    "education": [
+      {"tier": "tier_2", "degree": "B.Tech", "field_of_study": "Electronics Engineering"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": false,
+      "notice_period_days": 60,
+      "willing_to_relocate": true,
+      "preferred_work_mode": "hybrid",
+      "profile_completeness_score": 87,
+      "recruiter_response_rate": 0.74,
+      "github_activity_score": 68,
+      "interview_completion_rate": 0.86,
+      "last_active_date": "2026-06-10",
+      "verified_email": true,
+      "verified_phone": true,
+      "linkedin_connected": true
+    }
+  },
+  {
+    "candidate_id": "CAND_9000004",
+    "profile": {
+      "current_title": "Data Scientist",
+      "years_of_experience": 3.4,
+      "location": "Chennai"
+    },
+    "skills": [
+      {"name": "Python", "proficiency": "advanced", "endorsements": 14, "duration_months": 40},
+      {"name": "Data Science", "proficiency": "advanced", "endorsements": 17, "duration_months": 36},
+      {"name": "Scikit-learn", "proficiency": "advanced", "endorsements": 11, "duration_months": 30},
+      {"name": "XGBoost", "proficiency": "intermediate", "endorsements": 8, "duration_months": 20},
+      {"name": "Statistical Modeling", "proficiency": "advanced", "endorsements": 9, "duration_months": 28}
+    ],
+    "career_history": [
+      {"title": "Data Scientist", "description": "Built forecasting, classification, and experimentation models."}
+    ],
+    "education": [
+      {"tier": "tier_3", "degree": "M.Sc", "field_of_study": "Statistics"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": true,
+      "notice_period_days": 30,
+      "willing_to_relocate": true,
+      "preferred_work_mode": "hybrid",
+      "profile_completeness_score": 89,
+      "recruiter_response_rate": 0.78,
+      "github_activity_score": 54,
+      "interview_completion_rate": 0.84,
+      "last_active_date": "2026-06-15",
+      "verified_email": true,
+      "verified_phone": false,
+      "linkedin_connected": true
+    }
+  },
+  {
+    "candidate_id": "CAND_9000005",
+    "profile": {
+      "current_title": "MLOps Engineer",
+      "years_of_experience": 7.0,
+      "location": "Gurugram"
+    },
+    "skills": [
+      {"name": "Python", "proficiency": "advanced", "endorsements": 22, "duration_months": 72},
+      {"name": "MLOps", "proficiency": "expert", "endorsements": 28, "duration_months": 54},
+      {"name": "MLflow", "proficiency": "advanced", "endorsements": 16, "duration_months": 36},
+      {"name": "Kubeflow", "proficiency": "advanced", "endorsements": 12, "duration_months": 30},
+      {"name": "Model Serving", "proficiency": "expert", "endorsements": 18, "duration_months": 42}
+    ],
+    "career_history": [
+      {"title": "MLOps Engineer", "description": "Designed model training, deployment, monitoring, and serving infrastructure."}
+    ],
+    "education": [
+      {"tier": "tier_2", "degree": "B.E.", "field_of_study": "Software Engineering"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": true,
+      "notice_period_days": 45,
+      "willing_to_relocate": false,
+      "preferred_work_mode": "remote",
+      "profile_completeness_score": 94,
+      "recruiter_response_rate": 0.86,
+      "github_activity_score": 81,
+      "interview_completion_rate": 0.92,
+      "last_active_date": "2026-06-22",
+      "verified_email": true,
+      "verified_phone": true,
+      "linkedin_connected": true
+    }
+  },
+  {
+    "candidate_id": "CAND_9000006",
+    "profile": {
+      "current_title": "Data Engineer",
+      "years_of_experience": 5.8,
+      "location": "Mumbai"
+    },
+    "skills": [
+      {"name": "Python", "proficiency": "advanced", "endorsements": 15, "duration_months": 60},
+      {"name": "Spark", "proficiency": "advanced", "endorsements": 18, "duration_months": 48},
+      {"name": "Airflow", "proficiency": "advanced", "endorsements": 12, "duration_months": 30},
+      {"name": "SQL", "proficiency": "expert", "endorsements": 31, "duration_months": 70}
+    ],
+    "career_history": [
+      {"title": "Data Engineer", "description": "Built distributed data pipelines supporting model training."}
+    ],
+    "education": [
+      {"tier": "tier_3", "degree": "B.Tech", "field_of_study": "Information Technology"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": true,
+      "notice_period_days": 60,
+      "willing_to_relocate": false,
+      "preferred_work_mode": "hybrid",
+      "profile_completeness_score": 85,
+      "recruiter_response_rate": 0.72,
+      "github_activity_score": 44,
+      "interview_completion_rate": 0.82,
+      "last_active_date": "2026-06-12",
+      "verified_email": true,
+      "verified_phone": true,
+      "linkedin_connected": true
+    }
+  },
+  {
+    "candidate_id": "CAND_9000007",
+    "profile": {
+      "current_title": "Junior ML Engineer",
+      "years_of_experience": 1.5,
+      "location": "Kochi"
+    },
+    "skills": [
+      {"name": "Python", "proficiency": "advanced", "endorsements": 7, "duration_months": 24},
+      {"name": "Machine Learning", "proficiency": "intermediate", "endorsements": 6, "duration_months": 20},
+      {"name": "TensorFlow", "proficiency": "intermediate", "endorsements": 4, "duration_months": 14},
+      {"name": "Scikit-learn", "proficiency": "intermediate", "endorsements": 5, "duration_months": 18}
+    ],
+    "career_history": [
+      {"title": "ML Engineer Intern", "description": "Assisted with model training and evaluation."}
+    ],
+    "education": [
+      {"tier": "tier_2", "degree": "B.Tech", "field_of_study": "Computer Science"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": true,
+      "notice_period_days": 7,
+      "willing_to_relocate": true,
+      "preferred_work_mode": "flexible",
+      "profile_completeness_score": 83,
+      "recruiter_response_rate": 0.88,
+      "github_activity_score": 70,
+      "interview_completion_rate": 0.9,
+      "last_active_date": "2026-06-24",
+      "verified_email": true,
+      "verified_phone": true,
+      "linkedin_connected": true
+    }
+  },
+  {
+    "candidate_id": "CAND_9000008",
+    "profile": {
+      "current_title": "Backend Engineer",
+      "years_of_experience": 6.5,
+      "location": "Noida"
+    },
+    "skills": [
+      {"name": "Python", "proficiency": "expert", "endorsements": 26, "duration_months": 78},
+      {"name": "Docker", "proficiency": "advanced", "endorsements": 19, "duration_months": 48},
+      {"name": "Kubernetes", "proficiency": "advanced", "endorsements": 14, "duration_months": 36},
+      {"name": "Model Deployment", "proficiency": "intermediate", "endorsements": 3, "duration_months": 8}
+    ],
+    "career_history": [
+      {"title": "Backend Engineer", "description": "Developed APIs and services integrating machine learning models."}
+    ],
+    "education": [
+      {"tier": "tier_3", "degree": "B.E.", "field_of_study": "Computer Science"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": false,
+      "notice_period_days": 90,
+      "willing_to_relocate": false,
+      "preferred_work_mode": "remote",
+      "profile_completeness_score": 79,
+      "recruiter_response_rate": 0.62,
+      "github_activity_score": 58,
+      "interview_completion_rate": 0.78,
+      "last_active_date": "2026-05-30",
+      "verified_email": true,
+      "verified_phone": false,
+      "linkedin_connected": true
+    }
+  },
+  {
+    "candidate_id": "CAND_9000009",
+    "profile": {
+      "current_title": "AI Research Engineer",
+      "years_of_experience": 8.5,
+      "location": "Delhi"
+    },
+    "skills": [
+      {"name": "Python", "proficiency": "expert", "endorsements": 35, "duration_months": 96},
+      {"name": "Deep Learning", "proficiency": "expert", "endorsements": 29, "duration_months": 72},
+      {"name": "PyTorch", "proficiency": "expert", "endorsements": 27, "duration_months": 66},
+      {"name": "Transformers", "proficiency": "expert", "endorsements": 23, "duration_months": 48},
+      {"name": "Generative AI", "proficiency": "advanced", "endorsements": 15, "duration_months": 24}
+    ],
+    "career_history": [
+      {"title": "Research Engineer", "description": "Led deep learning and transformer model research."}
+    ],
+    "education": [
+      {"tier": "tier_1", "degree": "PhD", "field_of_study": "Machine Learning"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": false,
+      "notice_period_days": 90,
+      "willing_to_relocate": true,
+      "preferred_work_mode": "hybrid",
+      "profile_completeness_score": 98,
+      "recruiter_response_rate": 0.69,
+      "github_activity_score": 92,
+      "interview_completion_rate": 0.88,
+      "last_active_date": "2026-06-16",
+      "verified_email": true,
+      "verified_phone": true,
+      "linkedin_connected": true
+    }
+  },
+  {
+    "candidate_id": "CAND_9000010",
+    "profile": {
+      "current_title": "Business Analyst",
+      "years_of_experience": 4.0,
+      "location": "Ahmedabad"
+    },
+    "skills": [
+      {"name": "SQL", "proficiency": "advanced", "endorsements": 16, "duration_months": 42},
+      {"name": "Python", "proficiency": "beginner", "endorsements": 1, "duration_months": 2},
+      {"name": "Machine Learning", "proficiency": "beginner", "endorsements": 0, "duration_months": 1}
+    ],
+    "career_history": [
+      {"title": "Business Analyst", "description": "Produced reporting and business requirements."}
+    ],
+    "education": [
+      {"tier": "tier_4", "degree": "MBA", "field_of_study": "Business Administration"}
+    ],
+    "redrob_signals": {
+      "open_to_work_flag": true,
+      "notice_period_days": 60,
+      "willing_to_relocate": false,
+      "preferred_work_mode": "onsite",
+      "profile_completeness_score": 72,
+      "recruiter_response_rate": 0.65,
+      "github_activity_score": -1,
+      "interview_completion_rate": 0.75,
+      "last_active_date": "2026-05-15",
+      "verified_email": true,
+      "verified_phone": false,
+      "linkedin_connected": true
+    }
+  }
+]

@@ -2,7 +2,7 @@ import json
 from scorer import score_from_json_bytes
 from pathlib import Path
 
-raw = Path('./[PUB] India_runs_data_and_ai_challenge/India_runs_data_and_ai_challenge/sample_candidates.json').read_bytes()
+raw = Path(__file__).with_name('sample_candidates.json').read_bytes()
 results = score_from_json_bytes(raw)
 print(f'Total candidates scored: {len(results)}')
 print()

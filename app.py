@@ -7,7 +7,7 @@ and returns a downloadable submission.csv.
 
 Three tabs:
   1. Upload & Rank   – upload any sample file, get ranked CSV
-  2. Live Preview    – instant demo using bundled sample_candidates.json
+  2. Live Preview    – inspect the prebuilt top-100 result from the 100K run
   3. Methodology     – scoring formula documentation
 """
 
@@ -28,12 +28,8 @@ from scorer import score_from_json_bytes, WEIGHTS
 # Paths
 # ---------------------------------------------------------------------------
 _HERE = Path(__file__).parent
-SAMPLE_FILE = (
-    _HERE
-    / "[PUB] India_runs_data_and_ai_challenge"
-    / "India_runs_data_and_ai_challenge"
-    / "sample_candidates.json"
-)
+SAMPLE_FILE = _HERE / "sample_candidates.json"
+PREBUILT_SUBMISSION = _HERE / "submission.csv"
 
 # ---------------------------------------------------------------------------
 # Helper: build results table + CSV bytes
@@ -115,18 +111,81 @@ def process_upload(file_obj, top_n_slider):
         )
 
 
-def process_sample(top_n_slider):
-    if not SAMPLE_FILE.exists():
+def process_prebuilt_preview(top_n_slider):
+    """Load the precomputed top-100 ranking produced from the 100K dataset."""
+    try:
+        top_n = int(top_n_slider)
+
+        if PREBUILT_SUBMISSION.exists():
+            with PREBUILT_SUBMISSION.open("r", encoding="utf-8", newline="") as fh:
+                reader = csv.DictReader(fh)
+                required = {"candidate_id", "rank", "score", "reasoning"}
+                missing = required.difference(reader.fieldnames or [])
+                if missing:
+                    raise ValueError(
+                        "Prebuilt submission is missing columns: "
+                        + ", ".join(sorted(missing))
+                    )
+
+                results = [
+                    {
+                        "candidate_id": row["candidate_id"],
+                        "rank": int(row["rank"]),
+                        "score": float(row["score"]),
+                        "reasoning": row["reasoning"],
+                    }
+                    for row in reader
+                ]
+
+            results.sort(key=lambda row: row["rank"])
+            top = results[:top_n]
+            rows = [
+                [
+                    row["rank"],
+                    row["candidate_id"],
+                    f"{row['score']:.6f}",
+                    row["reasoning"],
+                ]
+                for row in top
+            ]
+            top1 = top[0] if top else {}
+            summary = (
+                "### ✅ Loaded prebuilt 100K-candidate ranking\n\n"
+                f"Showing **{len(top)} of {len(results)}** retained finalists from "
+                "the full 100,000-candidate run.\n\n"
+                f"**🥇 #1:** `{top1.get('candidate_id', '—')}` — "
+                f"score **{top1.get('score', 0):.6f}**"
+                if top
+                else "No prebuilt ranking rows were found."
+            )
+            return gr.update(value=rows), str(PREBUILT_SUBMISSION), summary
+
+        if SAMPLE_FILE.exists():
+            raw = SAMPLE_FILE.read_bytes()
+            results = score_from_json_bytes(raw)
+            top = results[:top_n]
+            rows = [
+                [
+                    rank,
+                    row["candidate_id"],
+                    f"{row['score']:.6f}",
+                    row["reasoning"],
+                ]
+                for rank, row in enumerate(top, 1)
+            ]
+            _, _, csv_path, _ = _build_outputs(results, top_n)
+            summary = (
+                "### ⚠️ Loaded fallback demo data\n\n"
+                f"`submission.csv` was not found, so this preview ranked "
+                f"the bundled sample and is showing **{len(top)}** candidates."
+            )
+            return gr.update(value=rows), csv_path, summary
+
         return (
             gr.update(value=[]),
             None,
-            f"Sample file not found at `{SAMPLE_FILE}`.",
+            "Prebuilt `submission.csv` and fallback sample data were not found.",
         )
-    try:
-        raw = SAMPLE_FILE.read_bytes()
-        results = score_from_json_bytes(raw)
-        rows, headers, csv_path, summary = _build_outputs(results, int(top_n_slider))
-        return gr.update(value=rows), csv_path, summary
     except Exception as exc:
         return (
             gr.update(value=[]),
@@ -370,41 +429,44 @@ with gr.Blocks(
         # ── Tab 2: Live Preview ──────────────────────────────────────────────
         with gr.TabItem("🔍 Live Preview", id="preview_tab"):
             gr.Markdown(
-                "Instant demo using the **bundled `sample_candidates.json`** (~20 candidates). "
-                "No upload required — just click the button!"
+                "Preview the **precomputed top-100 ranking** generated from the full "
+                "**100,000-candidate dataset**. The large private dataset is not loaded "
+                "into the Space; this tab reads the bundled `submission.csv` result."
             )
 
             with gr.Row():
                 with gr.Column(scale=1):
                     top_n_slider_2 = gr.Slider(
-                        minimum=5, maximum=20, value=20, step=5,
-                        label="Top-N to show",
+                        minimum=5, maximum=100, value=20, step=5,
+                        label="Finalists to show",
                     )
                     run_btn_2 = gr.Button(
-                        "▶️ Run on Sample Data", variant="primary",
+                        "▶️ Load Prebuilt 100K Ranking", variant="primary",
                         elem_classes=["run-btn"],
                     )
                     download_btn_2 = gr.File(
-                        label="⬇️ Download submission.csv",
+                        label="⬇️ Download full top-100 submission.csv",
                         interactive=False,
                     )
 
                 with gr.Column(scale=2):
                     summary_2 = gr.Markdown(
-                        value="*Click **Run on Sample Data** to rank the bundled sample candidates.*",
+                        value=(
+                            "*Click **Load Prebuilt 100K Ranking** to preview the "
+                            "competition-ready result without rerunning the full dataset.*"
+                        ),
                         elem_classes=["summary-md"],
                     )
 
             results_table_2 = gr.Dataframe(
-                headers=["Rank", "Candidate ID", "Score", "Title",
-                         "Exp (yrs)", "AI Skills", "Open to Work", "Reasoning"],
-                datatype=["number", "str", "str", "str", "str", "number", "str", "str"],
-                label="📊 Sample Ranked Results",
+                headers=["Rank", "Candidate ID", "Score", "Reasoning"],
+                datatype=["number", "str", "str", "str"],
+                label="📊 Prebuilt Top-100 Results",
                 wrap=True,
             )
 
             run_btn_2.click(
-                fn=process_sample,
+                fn=process_prebuilt_preview,
                 inputs=[top_n_slider_2],
                 outputs=[results_table_2, download_btn_2, summary_2],
             )
