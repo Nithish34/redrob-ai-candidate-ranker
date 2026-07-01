@@ -442,7 +442,7 @@ with gr.Blocks(
     gr.HTML("""
     <div class="header-block">
         <h1>🤖 Redrob AI Candidate Ranker</h1>
-        <p>Intelligent candidate discovery &amp; ranking for AI/ML roles — India Runs Data &amp; AI Challenge</p>
+        <p>Intelligent candidate discovery ranking system</p>
         <div class="badge-row">
             <span class="badge">⚡ 100K candidates in ~90s</span>
             <span class="badge">🧠 5-component scoring</span>
