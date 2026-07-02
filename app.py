@@ -32,7 +32,9 @@ from scorer import DEFAULT_SCORING_DATE, score_from_json_bytes, WEIGHTS
 _HERE = Path(__file__).parent
 SAMPLE_FILE = _HERE / "sample_candidates.json"
 PREBUILT_SUBMISSION = _HERE / "submission.csv"
-MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+MAX_UPLOAD_BYTES_JSON  = 50 * 1024 * 1024           # 50 MB  — JSON is parsed fully in memory
+MAX_UPLOAD_BYTES_JSONL = 1024 * 1024 * 1024          # 1 GB   — JSONL is streamed line-by-line
+MAX_UPLOAD_BYTES = MAX_UPLOAD_BYTES_JSONL             # kept for backwards compat
 MAX_JSON_RECORDS = 10_000
 GENERATED_FILE_TTL_SECONDS = 60 * 60
 GENERATED_FILE_DIR = Path(tempfile.gettempdir()) / "redrob-candidate-ranker"
@@ -134,8 +136,12 @@ def process_upload(file_obj, top_n_slider):
         elif hasattr(file_obj, "name"):
             uploaded_path = Path(file_obj.name)
         elif isinstance(file_obj, bytes):
-            if len(file_obj) > MAX_UPLOAD_BYTES:
-                raise ValueError("Upload exceeds the 50 MB web limit.")
+            # Raw bytes path — treat as JSON (fully in-memory)
+            if len(file_obj) > MAX_UPLOAD_BYTES_JSON:
+                raise ValueError(
+                    f"JSON upload exceeds the {MAX_UPLOAD_BYTES_JSON // (1024*1024)} MB "
+                    "in-memory limit. Upload a .jsonl file instead (up to 1 GB)."
+                )
             results = score_from_json_bytes(
                 file_obj,
                 scoring_date=DEFAULT_SCORING_DATE,
@@ -148,13 +154,23 @@ def process_upload(file_obj, top_n_slider):
 
         if not uploaded_path.exists():
             raise ValueError("Uploaded file is no longer available.")
-        if uploaded_path.stat().st_size > MAX_UPLOAD_BYTES:
-            raise ValueError(
-                "Upload exceeds the 50 MB web limit. "
-                "Use rank.py for the full 100K JSONL dataset."
-            )
 
         suffix = uploaded_path.suffix.lower()
+        # Enforce appropriate limit based on file type
+        if suffix == ".jsonl":
+            limit = MAX_UPLOAD_BYTES_JSONL
+            limit_label = "1 GB"
+        else:
+            limit = MAX_UPLOAD_BYTES_JSON
+            limit_label = "50 MB"
+
+        if uploaded_path.stat().st_size > limit:
+            raise ValueError(
+                f"Upload exceeds the {limit_label} limit for {suffix} files. "
+                "For .jsonl files up to 1 GB, use the web uploader. "
+                "For larger datasets use rank.py directly."
+            )
+
         if suffix == ".jsonl":
             results = rank_candidates(
                 uploaded_path,
@@ -461,8 +477,10 @@ with gr.Blocks(
             gr.Markdown(
                 "Upload your own **`.json`** (array) or **`.jsonl`** (one candidate per line) file. "
                 "The ranker will score every candidate and return a competition-ready "
-                "`submission.csv`. Web uploads are limited to **50 MB**; use `rank.py` "
-                "for the full 100K dataset."
+                "`submission.csv`. "
+                "**`.jsonl` uploads support up to 1 GB** (streamed line-by-line); "
+                "**`.json` uploads are limited to 50 MB** (parsed in-memory). "
+                "Use `rank.py` for the full 100K dataset."
             )
 
             with gr.Row():

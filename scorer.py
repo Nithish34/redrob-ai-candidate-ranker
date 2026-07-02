@@ -193,11 +193,14 @@ _TITLE_TIERS: list[tuple[list[str], float]] = [
     (["customer support", "customer service", "support engineer"], 0.04),
 ]
 
-# Build flat lookup
+# Build flat lookup — sorted longest-first so that more specific phrases
+# (e.g. "junior ml engineer") are matched and consumed before shorter
+# sub-phrases (e.g. "ml engineer") can override them.
 _TITLE_SCORE_MAP: list[tuple[str, float]] = []
 for _phrases, _score in _TITLE_TIERS:
     for _phrase in _phrases:
         _TITLE_SCORE_MAP.append((_phrase.lower(), _score))
+_TITLE_SCORE_MAP.sort(key=lambda t: len(t[0]), reverse=True)
 
 # Keywords that bump an otherwise-unknown title to 0.80
 _AI_TITLE_KEYWORDS = frozenset([
@@ -276,6 +279,8 @@ def _clamp(v: float, lo: float = 0.0, hi: float = 1.0) -> float:
 
 def _match_skill(name_lower: str) -> float:
     """Return taxonomy importance weight for a skill name, or 0.0 if not matched."""
+    if not isinstance(name_lower, str):
+        return 0.0
     # 1. Exact match
     if name_lower in AI_SKILL_TAXONOMY:
         return AI_SKILL_TAXONOMY[name_lower]
@@ -297,16 +302,18 @@ def _score_skills(candidate: dict) -> tuple[float, int]:
     """
     Returns (normalized_score 0-1, count_of_matched_ai_skills).
     """
-    skills: list[dict] = candidate.get("skills", [])
-    assessment_scores: dict[str, float] = (
-        candidate.get("redrob_signals", {}).get("skill_assessment_scores", {})
-    )
+    skills: list[dict] = candidate.get("skills") or []
+    redrob = candidate.get("redrob_signals") or {}
+    assessment_scores: dict[str, float] = redrob.get("skill_assessment_scores") or {}
 
     total_weight = 0.0
     matched_count = 0
 
     for sk in skills:
-        name = sk.get("name", "").lower().strip()
+        if not isinstance(sk, dict):
+            continue
+        raw_name = sk.get("name")
+        name = (raw_name or "").lower().strip()
         if not name:
             continue
 
@@ -315,9 +322,9 @@ def _score_skills(candidate: dict) -> tuple[float, int]:
             continue
 
         matched_count += 1
-        prof = _PROF_MULT.get(sk.get("proficiency", "beginner"), 0.50)
-        endorsements = sk.get("endorsements", 0)
-        duration_months = sk.get("duration_months", 0)
+        prof = _PROF_MULT.get(sk.get("proficiency") or "beginner", 0.50)
+        endorsements = sk.get("endorsements") or 0
+        duration_months = sk.get("duration_months") or 0
 
         # Quality gate: penalise likely keyword stuffers
         if endorsements < 2 and duration_months < 4:
@@ -332,8 +339,9 @@ def _score_skills(candidate: dict) -> tuple[float, int]:
         # Assessment score bonus (platform-verified skill)
         assess_bonus = 1.0
         for aname, ascore in assessment_scores.items():
-            if aname.lower() in name or name in aname.lower():
-                assess_bonus = 1.0 + (ascore / 100.0) * 0.15
+            aname_lower = (aname or "").lower()
+            if aname_lower in name or name in aname_lower:
+                assess_bonus = 1.0 + (float(ascore or 0) / 100.0) * 0.15
                 break
 
         total_weight += importance * prof * quality * assess_bonus
@@ -344,29 +352,39 @@ def _score_skills(candidate: dict) -> tuple[float, int]:
 
 
 def _score_title(candidate: dict) -> float:
-    current_title = candidate.get("profile", {}).get("current_title", "").lower()
+    profile = candidate.get("profile") or {}
+    current_title = (profile.get("current_title") or "").lower()
 
-    # Direct lookup in title map
+    # Longest-match consumption: iterate phrases longest-first (already sorted).
+    # Once a phrase is matched, remove it from the working title string so that
+    # sub-phrases within the same region cannot also match.
     best = 0.0
+    remaining_title = current_title
     for phrase, score in _TITLE_SCORE_MAP:
-        if phrase in current_title:
+        if phrase in remaining_title:
             best = max(best, score)
+            # Consume the matched region to prevent shorter sub-phrase override
+            remaining_title = remaining_title.replace(phrase, "", 1)
 
-    # Keyword bump for unlisted titles
+    # Keyword bump for unlisted titles (applied to original title)
     for kw in _AI_TITLE_KEYWORDS:
         if kw in current_title:
             best = max(best, 0.80)
 
     # Career history: past AI/ML roles contribute 30 %
     career_bonus = 0.0
-    for job in candidate.get("career_history", [])[:5]:
-        jtitle = job.get("title", "").lower()
+    for job in (candidate.get("career_history") or [])[:5]:
+        if not isinstance(job, dict):
+            continue
+        jtitle = (job.get("title") or "").lower()
+        remaining_jtitle = jtitle
         for phrase, score in _TITLE_SCORE_MAP:
-            if phrase in jtitle:
+            if phrase in remaining_jtitle:
                 career_bonus = max(career_bonus, score * 0.30)
+                remaining_jtitle = remaining_jtitle.replace(phrase, "", 1)
 
         # ML keywords in role description
-        desc = job.get("description", "").lower()
+        desc = (job.get("description") or "").lower()
         ml_desc_kws = ["machine learning", "deep learning", "neural network",
                        "model training", "llm", "nlp", "computer vision",
                        "pytorch", "tensorflow", "transformer", "fine-tun"]
@@ -377,7 +395,11 @@ def _score_title(candidate: dict) -> float:
 
 
 def _score_experience(candidate: dict) -> float:
-    yoe = float(candidate.get("profile", {}).get("years_of_experience", 0))
+    profile = candidate.get("profile") or {}
+    try:
+        yoe = float(profile.get("years_of_experience") or 0)
+    except (TypeError, ValueError):
+        yoe = 0.0
     if 3.0 <= yoe <= 8.0:
         return 1.00
     elif 2.0 <= yoe < 3.0 or 8.0 < yoe <= 12.0:
@@ -391,13 +413,16 @@ def _score_experience(candidate: dict) -> float:
 
 
 def _score_availability(candidate: dict) -> float:
-    sig = candidate.get("redrob_signals", {})
+    sig = candidate.get("redrob_signals") or {}
     score = 0.0
 
     if sig.get("open_to_work_flag", False):
         score += 0.40
 
-    notice = sig.get("notice_period_days", 90)
+    try:
+        notice = float(sig.get("notice_period_days") or 90)
+    except (TypeError, ValueError):
+        notice = 90
     if notice <= 15:
         score += 0.35
     elif notice <= 30:
@@ -411,29 +436,54 @@ def _score_availability(candidate: dict) -> float:
     if sig.get("willing_to_relocate", False):
         score += 0.15
 
-    mode = sig.get("preferred_work_mode", "")
+    mode = (sig.get("preferred_work_mode") or "").lower()
     if mode in ("remote", "flexible", "hybrid"):
         score += 0.10
 
     return _clamp(score)
 
 
+# Short degree abbreviations that must only match at word boundaries.
+_DEGREE_EXACT_ABBREV: frozenset[str] = frozenset({"ms", "bs", "be", "mba"})
+_DEGREE_WORD_RE: dict[str, re.Pattern] = {
+    abbrev: re.compile(r"(?<![a-z])" + re.escape(abbrev) + r"(?![a-z])")
+    for abbrev in _DEGREE_EXACT_ABBREV
+}
+
+
+def _normalize_tier(raw: str | None) -> str:
+    """Normalize tier strings like 'Tier-1', 'tier 1', 'TIER_2' → 'tier_1'."""
+    if not raw:
+        return "unknown"
+    normalized = str(raw).lower().strip()
+    normalized = re.sub(r"[\s\-]+", "_", normalized)  # spaces/dashes → underscore
+    return normalized
+
+
 def _score_education(candidate: dict) -> float:
-    education: list[dict] = candidate.get("education", [])
+    education: list[dict] = candidate.get("education") or []
     if not education:
         return 0.30
 
     best = 0.0
     for edu in education:
-        tier_s = _TIER_SCORE.get(edu.get("tier", "unknown"), 0.52)
+        if not isinstance(edu, dict):
+            continue
+        # Fix 3: normalize tier string before lookup
+        tier_key = _normalize_tier(edu.get("tier"))
+        tier_s = _TIER_SCORE.get(tier_key, 0.52)
 
-        degree = edu.get("degree", "").lower()
+        degree = (edu.get("degree") or "").lower()
         deg_s = 0.60
         for key, val in _DEGREE_SCORE:
-            if key in degree:
+            if key in _DEGREE_EXACT_ABBREV:
+                # Fix 2: word-boundary match to prevent "ms" inside "systems"
+                if _DEGREE_WORD_RE[key].search(degree):
+                    deg_s = max(deg_s, val)
+            elif key in degree:
                 deg_s = max(deg_s, val)
 
-        field = edu.get("field_of_study", "").lower()
+        field = (edu.get("field_of_study") or "").lower()
         field_ok = any(f in field for f in _RELEVANT_FIELDS)
         field_s = 0.20 if field_ok else 0.0
 
@@ -444,24 +494,37 @@ def _score_education(candidate: dict) -> float:
 
 
 def _behavioral_modifier(candidate: dict, scoring_date: date) -> float:
-    sig = candidate.get("redrob_signals", {})
+    sig = candidate.get("redrob_signals") or {}
     mod = 1.0
 
     # Profile completeness  (-0.05 to +0.05)
-    completeness = sig.get("profile_completeness_score", 50.0) / 100.0
+    try:
+        completeness = float(sig.get("profile_completeness_score") or 50.0) / 100.0
+    except (TypeError, ValueError):
+        completeness = 0.5
     mod += (completeness - 0.5) * 0.10
 
     # Recruiter response rate  (-0.04 to +0.04)
-    rr = sig.get("recruiter_response_rate", 0.5)
+    try:
+        rr = float(sig.get("recruiter_response_rate") or 0.5)
+    except (TypeError, ValueError):
+        rr = 0.5
     mod += (rr - 0.5) * 0.08
 
     # GitHub activity (-1 = no GitHub)  (0 to +0.04)
-    gh = sig.get("github_activity_score", -1)
+    gh_raw = sig.get("github_activity_score")
+    try:
+        gh = float(gh_raw) if gh_raw is not None else -1
+    except (TypeError, ValueError):
+        gh = -1
     if gh >= 0:
         mod += (gh / 100.0) * 0.04
 
     # Interview completion rate  (-0.02 to +0.02)
-    icr = sig.get("interview_completion_rate", 0.5)
+    try:
+        icr = float(sig.get("interview_completion_rate") or 0.5)
+    except (TypeError, ValueError):
+        icr = 0.5
     mod += (icr - 0.5) * 0.04
 
     # Recency of activity
